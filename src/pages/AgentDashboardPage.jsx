@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client.js'
 import Seo from '@/components/Seo.jsx'
-import { LogOut, Mail, Phone, Calendar, User, ExternalLink } from 'lucide-react'
+import { LogOut, Mail, Phone, Calendar, User } from 'lucide-react'
 import LeadStatusSelect from '@/components/LeadStatusSelect.jsx'
 
 /**

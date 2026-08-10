@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client.js'
-import { supabaseAdmin } from '@/api/supabaseClient.js'
 import { useAuth } from '@/lib/AuthContext.jsx'
 import Seo from '@/components/Seo.jsx'
-import { Plus, Edit2, Trash2, Save, X, LogOut, Settings, Copy, Check } from 'lucide-react'
+import { Plus, Edit2, Trash2, Save, X, LogOut, Copy, Check } from 'lucide-react'
 import LeadStatusSelect from '@/components/LeadStatusSelect.jsx'
 
 const ADMIN_EMAILS = ["rafat@citywalkrealestatellc.com"]
@@ -13,9 +12,8 @@ export default function AdminDashboard() {
   const { user, signOut, isAdmin, createAgentAuth } = useAuth()
   const navigate = useNavigate()
 
-  const demoLoggedIn = localStorage.getItem('demo_admin_session') === 'true' || !!localStorage.getItem('demo_admin_session')
+  const demoLoggedIn = !!localStorage.getItem('demo_admin_session')
   const supabaseUser = user
-  const authenticated = supabaseUser || (demoLoggedIn && ADMIN_EMAILS.includes(supabaseUser?.email))
 
   // Check access: either demo admin or Supabase user with admin email
   const sessionEmail = supabaseUser?.email
@@ -155,7 +153,7 @@ export default function AdminDashboard() {
           })
 
           // Create auth user for the agent
-          const { user: authUser, error: authError } = await createAgentAuth(data.email, password)
+          const { error: authError } = await createAgentAuth(data.email, password)
 
           if (authError) {
             alert('Agent created, but auth user creation failed. Check Supabase admin config.')
