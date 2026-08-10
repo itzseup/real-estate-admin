@@ -1,1 +1,9 @@
-{"version": 2,\n "builds": [\n    {"src": "src/main.jsx", "use": "@vercel/static-build"} \n ],\n "routes": [\n    {"src": "/(.*)", "dest": "/src/main.jsx"}\n ]}\n
+{
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "/dist/index.html" }
+  ]
+}
