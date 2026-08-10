@@ -1,0 +1,143 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 165 71% 14%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 165 71% 14%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 165 71% 14%;
+
+    --primary: 165 71% 14%;
+    --primary-foreground: 40 20% 97%;
+
+    --secondary: 40 20% 96%;
+    --secondary-foreground: 165 71% 14%;
+
+    --muted: 40 14% 95%;
+    --muted-foreground: 165 8% 40%;
+
+    --accent: 22 50% 48%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 45%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 40 12% 88%;
+    --input: 40 12% 88%;
+    --ring: 165 71% 14%;
+
+    --radius: 0.25rem;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+  }
+}
+
+@layer components {
+  /* Horizontal rails: hide the scrollbar but keep the scroll */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Small uppercase eyebrow label used above section headings */
+  .eyebrow {
+    @apply font-body text-[11px] uppercase tracking-label text-orange-accent;
+  }
+
+  /* Floating particle animations — 3 variants for staggered drift */
+  .animate-float-0 {
+    animation: float-0 20s linear infinite;
+  }
+  .animate-float-1 {
+    animation: float-1 25s linear infinite;
+  }
+  .animate-float-2 {
+    animation: float-2 30s linear infinite;
+  }
+
+  @keyframes float-0 {
+    0% {
+      transform: translateY(0) translateX(0) scale(1);
+      opacity: 0;
+    }
+    10% {
+      opacity: 0.4;
+    }
+    90% {
+      opacity: 0.35;
+    }
+    100% {
+      transform: translateY(-100vh) translateX(20px) scale(0.8);
+      opacity: 0;
+    }
+  }
+
+  @keyframes float-1 {
+    0% {
+      transform: translateY(0) translateX(0) scale(0.8);
+      opacity: 0;
+    }
+    15% {
+      opacity: 0.35;
+    }
+    85% {
+      opacity: 0.3;
+    }
+    100% {
+      transform: translateY(-100vh) translateX(-15px) scale(1);
+      opacity: 0;
+    }
+  }
+
+  @keyframes float-2 {
+    0% {
+      transform: translateY(0) scale(1.2);
+      opacity: 0;
+    }
+    20% {
+      opacity: 0.25;
+    }
+    80% {
+      opacity: 0.2;
+    }
+    100% {
+      transform: translateY(-100vh) scale(0.8);
+      opacity: 0;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
