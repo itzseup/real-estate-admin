@@ -92,9 +92,16 @@ function createEntity(entityName) {
         return getEntityData(entityName)
       }
       const items = data || []
-      // Update localStorage cache
-      setEntityData(entityName, items)
-      return items
+      // Merge with localStorage (to include records saved via fallback)
+      const localItems = getEntityData(entityName)
+      const merged = [...items]
+      for (const localItem of localItems) {
+        if (!merged.find((item) => item.id === localItem.id)) {
+          merged.push(localItem)
+        }
+      }
+      setEntityData(entityName, merged)
+      return merged
     },
 
     // get(id) - mimics base44.entities.Entity.get(id)

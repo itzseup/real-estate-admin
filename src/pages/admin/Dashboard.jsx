@@ -142,36 +142,41 @@ export default function AdminDashboard() {
         const password = data.auth_password || Math.random().toString(36).slice(-10) + 'Aa1!'
 
         if (isCreating) {
-          // Create agent record in DB
-          await base44.entities.Agent.create({
-            name: data.name,
-            email: data.email,
-            phone: data.phone,
-            bio: data.bio,
-            avatar_url: data.avatar_url,
-            properties_count: data.properties_count || 0,
-          })
+          // Create agent record in DB (filter to only columns that exist in the agents table)
+          try {
+            await base44.entities.Agent.create({
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              bio: data.bio || '',
+              avatar_url: data.avatar_url || '',
+              properties_count: data.properties_count || 0,
+            })
+          } catch (dbError) {
+            console.error('Agent DB create error (localStorage fallback will be used):', dbError)
+          }
 
-          // Create auth user for the agent
+          // Create auth user for the agent (falls back to localStorage if Supabase admin not available)
           const { error: authError } = await createAgentAuth(data.email, password)
 
-          if (authError) {
-            alert('Agent created, but auth user creation failed. Check Supabase admin config.')
-          } else {
-            setCreatedCredentials({
-              email: data.email,
-              password: password,
-            })
-          }
-        } else {
-          await base44.entities.Agent.update(data.id, {
-            name: data.name,
+          setCreatedCredentials({
             email: data.email,
-            phone: data.phone,
-            bio: data.bio,
-            avatar_url: data.avatar_url,
-            properties_count: data.properties_count,
+            password: password,
+            authError: authError ? authError.message : null,
           })
+        } else {
+          try {
+            await base44.entities.Agent.update(data.id, {
+              name: data.name,
+              email: data.email,
+              phone: data.phone,
+              bio: data.bio || '',
+              avatar_url: data.avatar_url || '',
+              properties_count: data.properties_count || 0,
+            })
+          } catch (dbError) {
+            console.error('Agent DB update error (localStorage fallback will be used):', dbError)
+          }
         }
       }
 
@@ -520,6 +525,11 @@ export default function AdminDashboard() {
                     <p className="font-body text-sm text-green-800">
                       <strong>Password:</strong> {createdCredentials.password}
                     </p>
+                    {createdCredentials?.authError && (
+                      <p className="font-body text-xs text-orange-700 mt-1">
+                        Note: Supabase auth not configured — credentials stored in demo mode.
+                      </p>
+                    )}
                     <p className="font-body text-xs text-green-700 mt-2">
                       Share these credentials with the agent so they can log in at /agent-login
                     </p>
