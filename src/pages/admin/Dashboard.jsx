@@ -142,18 +142,17 @@ export default function AdminDashboard() {
         const password = data.auth_password || Math.random().toString(36).slice(-10) + 'Aa1!'
 
         if (isCreating) {
-          // Create agent record in DB (filter to only columns that exist in the agents table)
+          // Create agent record in DB (only use columns that exist in the agents table)
+          const agentPayload = {
+            name: data.name,
+            email: data.email,
+            phone: data.phone,
+            bio: data.bio || '',
+          }
           try {
-            await base44.entities.Agent.create({
-              name: data.name,
-              email: data.email,
-              phone: data.phone,
-              bio: data.bio || '',
-              avatar_url: data.avatar_url || '',
-              properties_count: data.properties_count || 0,
-            })
+            await base44.entities.Agent.create(agentPayload)
           } catch (dbError) {
-            console.error('Agent DB create error (localStorage fallback will be used):', dbError)
+            console.error('Agent DB create error (localStorage fallback will be used):', dbError.message || dbError)
           }
 
           // Create auth user for the agent (falls back to localStorage if Supabase admin not available)
@@ -171,11 +170,9 @@ export default function AdminDashboard() {
               email: data.email,
               phone: data.phone,
               bio: data.bio || '',
-              avatar_url: data.avatar_url || '',
-              properties_count: data.properties_count || 0,
             })
           } catch (dbError) {
-            console.error('Agent DB update error (localStorage fallback will be used):', dbError)
+            console.error('Agent DB update error (localStorage fallback will be used):', dbError.message || dbError)
           }
         }
       }
