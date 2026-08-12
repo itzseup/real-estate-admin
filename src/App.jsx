@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
+import { HelmetProvider } from 'react-helmet-async'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/lib/AuthContext.jsx'
 import LoginPage from '@/pages/LoginPage.jsx'
@@ -20,28 +21,30 @@ function PageNotFound() {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <Routes>
-          {/* Root redirects to login */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+    <HelmetProvider>
+      <Router>
+        <AuthProvider>
+          <Routes>
+            {/* Root redirects to login */}
+            <Route path="/" element={<Navigate to="/login" replace />} />
 
-          {/* Public login pages */}
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/agent-login" element={<AgentLoginPage />} />
+            {/* Public login pages */}
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/agent-login" element={<AgentLoginPage />} />
 
-          {/* Admin dashboard — only admin role */}
-          <Route path="/admin" element={<AdminDashboard />} />
+            {/* Admin dashboard — only admin role */}
+            <Route path="/admin" element={<AdminDashboard />} />
 
-          {/* Agent dashboard — only agent role */}
-          <Route path="/agent-dashboard" element={<AgentDashboardPage />} />
+            {/* Agent dashboard — only agent role */}
+            <Route path="/agent-dashboard" element={<AgentDashboardPage />} />
 
-          {/* Catch-all 404 */}
-          <Route path="*" element={<PageNotFound />} />
-        </Routes>
-        <Toaster />
-      </AuthProvider>
-    </Router>
+            {/* Catch-all 404 */}
+            <Route path="*" element={<PageNotFound />} />
+          </Routes>
+          <Toaster />
+        </AuthProvider>
+      </Router>
+    </HelmetProvider>
   )
 }
 
