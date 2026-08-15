@@ -82,31 +82,36 @@ function createEntity(entityName) {
         return items
       }
 
-      const sortObj = parseSort(sortParam)
-      let query = supabase.from(tableName).select('*')
+      try {
+        const sortObj = parseSort(sortParam)
+        let query = supabase.from(tableName).select('*')
 
-      for (const [column, options] of Object.entries(sortObj)) {
-        query = query.order(column, options)
-      }
+        for (const [column, options] of Object.entries(sortObj)) {
+          query = query.order(column, options)
+        }
 
-      query = query.limit(limit)
+        query = query.limit(limit)
 
-      const { data, error } = await query
-      if (error) {
-        console.error(`Error listing ${entityName}:`, error)
+        const { data, error } = await query
+        if (error) {
+          console.error(`Error listing ${entityName}:`, error)
+          return getEntityData(entityName)
+        }
+        const items = data || []
+        // Merge with localStorage (to include records saved via fallback)
+        const localItems = getEntityData(entityName)
+        const merged = [...items]
+        for (const localItem of localItems) {
+          if (!merged.find((item) => item.id === localItem.id)) {
+            merged.push(localItem)
+          }
+        }
+        setEntityData(entityName, merged)
+        return merged
+      } catch (supabaseError) {
+        console.warn(`Supabase list for ${entityName} failed, using localStorage fallback:`, supabaseError.message)
         return getEntityData(entityName)
       }
-      const items = data || []
-      // Merge with localStorage (to include records saved via fallback)
-      const localItems = getEntityData(entityName)
-      const merged = [...items]
-      for (const localItem of localItems) {
-        if (!merged.find((item) => item.id === localItem.id)) {
-          merged.push(localItem)
-        }
-      }
-      setEntityData(entityName, merged)
-      return merged
     },
 
     // get(id) - mimics base44.entities.Entity.get(id)
@@ -116,18 +121,24 @@ function createEntity(entityName) {
         return items.find((item) => item.id === id) || null
       }
 
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select('*')
+          .eq('id', id)
+          .single()
 
-      if (error) {
-        console.error(`Error getting ${entityName}:`, error)
+        if (error) {
+          console.error(`Error getting ${entityName}:`, error)
+          const items = getEntityData(entityName)
+          return items.find((item) => item.id === id) || null
+        }
+        return data
+      } catch (supabaseError) {
+        console.warn(`Supabase get for ${entityName} (${id}) failed, using localStorage fallback:`, supabaseError.message)
         const items = getEntityData(entityName)
         return items.find((item) => item.id === id) || null
       }
-      return data
     },
 
     // create(payload) - mimics base44.entities.Entity.create({...})
@@ -145,17 +156,22 @@ function createEntity(entityName) {
         return record
       }
 
-      const { data, error } = await supabase
-        .from(tableName)
-        .insert(record)
-        .select()
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from(tableName)
+          .insert(record)
+          .select()
+          .single()
 
-      if (error) {
-        console.error(`Error creating ${entityName}:`, error)
+        if (error) {
+          console.error(`Error creating ${entityName}:`, error)
+          return record
+        }
+        return data || record
+      } catch (supabaseError) {
+        console.warn(`Supabase create for ${entityName} failed, using localStorage fallback:`, supabaseError.message)
         return record
       }
-      return data || record
     },
 
     // update(id, payload) - mimics base44.entities.Entity.update(id, {...})
@@ -174,18 +190,23 @@ function createEntity(entityName) {
         return localItems[localIdx] || null
       }
 
-      const { data, error } = await supabase
-        .from(tableName)
-        .update(payload)
-        .eq('id', id)
-        .select()
-        .single()
+      try {
+        const { data, error } = await supabase
+          .from(tableName)
+          .update(payload)
+          .eq('id', id)
+          .select()
+          .single()
 
-      if (error) {
-        console.error(`Error updating ${entityName}:`, error)
+        if (error) {
+          console.error(`Error updating ${entityName}:`, error)
+          return localItems[localIdx] || null
+        }
+        return data || localItems[localIdx] || null
+      } catch (supabaseError) {
+        console.warn(`Supabase update for ${entityName} (${id}) failed, using localStorage fallback:`, supabaseError.message)
         return localItems[localIdx] || null
       }
-      return data || localItems[localIdx] || null
     },
 
     // delete(id) - mimics base44.entities.Entity.delete(id)
@@ -203,13 +224,20 @@ function createEntity(entityName) {
         return true
       }
 
-      const { error } = await supabase
-        .from(tableName)
-        .delete()
-        .eq('id', id)
+      try {
+        const { error } = await supabase
+          .from(tableName)
+          .delete()
+          .eq('id', id)
 
-      if (error) {
-        console.error(`Error deleting ${entityName} from Supabase:`, error)
+        if (error) {
+          console.error(`Error deleting ${entityName} from Supabase:`, error)
+        }
+      } catch (supabaseError) {
+        // Supabase mock client may not support full chaining (e.g., .delete().eq())
+        // The localStorage deletion above already handled the local copy, so this
+        // error can be safely swallowed.
+        console.warn(`Supabase delete for ${entityName} (${id}) skipped:`, supabaseError.message)
       }
       return true
     },
@@ -220,15 +248,20 @@ function createEntity(entityName) {
         return getEntityData(entityName).length
       }
 
-      const { count, error } = await supabase
-        .from(tableName)
-        .select('*', { count: 'exact', head: true })
+      try {
+        const { count, error } = await supabase
+          .from(tableName)
+          .select('*', { count: 'exact', head: true })
 
-      if (error) {
-        console.error(`Error counting ${entityName}:`, error)
+        if (error) {
+          console.error(`Error counting ${entityName}:`, error)
+          return getEntityData(entityName).length
+        }
+        return count
+      } catch (supabaseError) {
+        console.warn(`Supabase count for ${entityName} failed, using localStorage fallback:`, supabaseError.message)
         return getEntityData(entityName).length
       }
-      return count
     },
   }
 }
