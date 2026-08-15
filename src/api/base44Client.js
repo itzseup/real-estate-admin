@@ -134,10 +134,14 @@ function createEntity(entityName) {
     create: async (payload) => {
       const record = { ...payload, id: payload.id || generateId(), created_at: payload.created_at || new Date().toISOString() }
 
-      if (!isSupabaseReady()) {
-        const items = getEntityData(entityName)
+      // Always write to localStorage fallback so list() (which merges) picks it up
+      const items = getEntityData(entityName)
+      if (!items.some((item) => item.id === record.id)) {
         items.push(record)
         setEntityData(entityName, items)
+      }
+
+      if (!isSupabaseReady()) {
         return record
       }
 
@@ -149,25 +153,25 @@ function createEntity(entityName) {
 
       if (error) {
         console.error(`Error creating ${entityName}:`, error)
-        const items = getEntityData(entityName)
-        items.push(record)
-        setEntityData(entityName, items)
         return record
       }
-      return data
+      return data || record
     },
 
     // update(id, payload) - mimics base44.entities.Entity.update(id, {...})
     update: async (id, payload) => {
+      const record = { ...payload, updated_at: new Date().toISOString() }
+
+      // Always update localStorage fallback so list() (which merges) picks it up
+      const localItems = getEntityData(entityName)
+      const localIdx = localItems.findIndex((item) => item.id === id)
+      if (localIdx >= 0) {
+        localItems[localIdx] = { ...localItems[localIdx], ...payload }
+        setEntityData(entityName, localItems)
+      }
+
       if (!isSupabaseReady()) {
-        const items = getEntityData(entityName)
-        const idx = items.findIndex((item) => item.id === id)
-        if (idx >= 0) {
-          items[idx] = { ...items[idx], ...payload }
-          setEntityData(entityName, items)
-          return items[idx]
-        }
-        return null
+        return localItems[localIdx] || null
       }
 
       const { data, error } = await supabase
@@ -179,24 +183,23 @@ function createEntity(entityName) {
 
       if (error) {
         console.error(`Error updating ${entityName}:`, error)
-        const items = getEntityData(entityName)
-        const idx = items.findIndex((item) => item.id === id)
-        if (idx >= 0) {
-          items[idx] = { ...items[idx], ...payload }
-          setEntityData(entityName, items)
-          return items[idx]
-        }
-        return null
+        return localItems[localIdx] || null
       }
-      return data
+      return data || localItems[localIdx] || null
     },
 
     // delete(id) - mimics base44.entities.Entity.delete(id)
     delete: async (id) => {
-      if (!isSupabaseReady()) {
-        const items = getEntityData(entityName)
-        const filtered = items.filter((item) => item.id !== id)
+      // Always remove from localStorage fallback (handles the case where
+      // isSupabaseReady() is true but Supabase is a mock/unreachable, and
+      // list() merges localStorage data back in)
+      const localItems = getEntityData(entityName)
+      if (localItems.some((item) => item.id === id)) {
+        const filtered = localItems.filter((item) => item.id !== id)
         setEntityData(entityName, filtered)
+      }
+
+      if (!isSupabaseReady()) {
         return true
       }
 
@@ -206,11 +209,7 @@ function createEntity(entityName) {
         .eq('id', id)
 
       if (error) {
-        console.error(`Error deleting ${entityName}:`, error)
-        const items = getEntityData(entityName)
-        const filtered = items.filter((item) => item.id !== id)
-        setEntityData(entityName, filtered)
-        return true
+        console.error(`Error deleting ${entityName} from Supabase:`, error)
       }
       return true
     },

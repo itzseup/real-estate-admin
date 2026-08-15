@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { base44 } from '@/api/base44Client.js'
 import { useAuth } from '@/lib/AuthContext.jsx'
 import Seo from '@/components/Seo.jsx'
-import { Plus, Edit2, Trash2, Save, X, LogOut, Copy, Check } from 'lucide-react'
+import { Plus, Edit2, Trash2, Save, X, LogOut, Copy, Check, User, ImageIcon } from 'lucide-react'
 import LeadStatusSelect from '@/components/LeadStatusSelect.jsx'
+import ImageUploader from '@/components/ImageUploader.jsx'
 
 const ADMIN_EMAILS = ["rafat@citywalkrealestatellc.com"]
 
@@ -132,10 +133,15 @@ export default function AdminDashboard() {
 
     try {
       if (type === 'property') {
+        // Set featured_image from first image URL if not already set
+        const saveData = { ...data }
+        if (saveData.image_urls && saveData.image_urls.length > 0 && !saveData.featured_image) {
+          saveData.featured_image = saveData.image_urls[0]
+        }
         if (isCreating) {
-          await base44.entities.Property.create(data)
+          await base44.entities.Property.create(saveData)
         } else {
-          await base44.entities.Property.update(data.id, data)
+          await base44.entities.Property.update(data.id, saveData)
         }
       } else if (type === 'agent') {
         // Generate or use existing password
@@ -148,6 +154,7 @@ export default function AdminDashboard() {
             email: data.email,
             phone: data.phone,
             bio: data.bio || '',
+            avatar_url: data.avatar_url || '',
           }
           try {
             await base44.entities.Agent.create(agentPayload)
@@ -170,6 +177,7 @@ export default function AdminDashboard() {
               email: data.email,
               phone: data.phone,
               bio: data.bio || '',
+              avatar_url: data.avatar_url || '',
             })
           } catch (dbError) {
             console.error('Agent DB update error (localStorage fallback will be used):', dbError.message || dbError)
@@ -212,20 +220,6 @@ export default function AdminDashboard() {
       data: {
         ...editingItem.data,
         [name]: fieldValue,
-      },
-    })
-  }
-
-  function handleImageUrlsChange(e) {
-    const urls = e.target.value
-      .split('\n')
-      .map((s) => s.trim())
-      .filter(Boolean)
-    setEditingItem({
-      ...editingItem,
-      data: {
-        ...editingItem.data,
-        image_urls: urls,
       },
     })
   }
@@ -417,8 +411,12 @@ export default function AdminDashboard() {
               agents.map((agent) => (
                 <div key={agent.id} className="border border-border/20 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    {agent.avatar_url && (
+                    {agent.avatar_url ? (
                       <img src={agent.avatar_url} alt={agent.name} className="w-16 h-16 object-cover rounded-full" />
+                    ) : (
+                      <div className="w-16 h-16 bg-forest/10 rounded-full flex items-center justify-center">
+                        <User className="h-8 w-8 text-forest" />
+                      </div>
                     )}
                     <div>
                       <h3 className="font-display text-lg">{agent.name}</h3>
@@ -456,8 +454,12 @@ export default function AdminDashboard() {
               properties.map((property) => (
                 <div key={property.id} className="border border-border/20 rounded-lg p-4 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    {property.featured_image && (
+                    {property.featured_image ? (
                       <img src={property.featured_image} alt={property.title} className="w-16 h-16 object-cover rounded" />
+                    ) : (
+                      <div className="w-16 h-16 bg-forest/10 rounded flex items-center justify-center">
+                        <ImageIcon className="h-8 w-8 text-forest" />
+                      </div>
                     )}
                     <div>
                       <h3 className="font-display text-lg">{property.title}</h3>
@@ -584,9 +586,16 @@ export default function AdminDashboard() {
                       <textarea name="description" rows={4} value={editingItem.data.description} onChange={handleInputChange} className="w-full px-4 py-3 border border-border rounded-lg font-body text-sm resize-none" />
                     </div>
                     <div>
-                      <label className="block font-body text-xs tracking-label uppercase text-muted-foreground mb-2">Image URLs (one per line)</label>
-                      <textarea name="image_urls" rows={3} placeholder="https://example.com/image1.jpg" value={editingItem.data.image_urls?.join('\n') || ''} onChange={handleImageUrlsChange} className="w-full px-4 py-3 border border-border rounded-lg font-body text-sm resize-none" />
-                      <p className="font-body text-xs text-muted-foreground mt-1">Get image URLs from your image host or CDN. The first URL becomes the featured image.</p>
+                      <ImageUploader
+                        value={editingItem.data.image_urls || []}
+                        onChange={(urls) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, image_urls: urls },
+                        })}
+                        multiple={true}
+                        label="Property Images"
+                      />
+                      <p className="font-body text-xs text-muted-foreground mt-1">Upload multiple images. The first image becomes the featured image.</p>
                     </div>
                   </>
                 ) : (
@@ -616,8 +625,17 @@ export default function AdminDashboard() {
                       <textarea name="bio" rows={4} value={editingItem.data.bio} onChange={handleInputChange} className="w-full px-4 py-3 border border-border rounded-lg font-body text-sm resize-none" />
                     </div>
                     <div>
-                      <label className="block font-body text-xs tracking-label uppercase text-muted-foreground mb-2">Photo URL</label>
-                      <input type="url" name="avatar_url" placeholder="https://example.com/photo.jpg" value={editingItem.data.avatar_url} onChange={handleInputChange} className="w-full px-4 py-3 border border-border rounded-lg font-body text-sm" />
+                      <label className="block font-body text-xs tracking-label uppercase text-muted-foreground mb-2">Profile Picture</label>
+                      <ImageUploader
+                        value={editingItem.data.avatar_url ? [editingItem.data.avatar_url] : []}
+                        onChange={(urls) => setEditingItem({
+                          ...editingItem,
+                          data: { ...editingItem.data, avatar_url: urls[0] || '' },
+                        })}
+                        multiple={false}
+                        label="Agent Photo"
+                      />
+                      <p className="font-body text-xs text-muted-foreground mt-1">Upload a profile photo for this agent.</p>
                     </div>
                   </>
                 )}
