@@ -101,8 +101,7 @@ function createEntity(entityName) {
     list: async (sortParam = '-created_date', limit = 100) => {
       if (!isSupabaseReady()) {
         // localStorage fallback
-        const items = getEntityData(entityName)
-        return items
+        return filterDeletedIds(entityName, getEntityData(entityName))
       }
 
       try {
@@ -120,18 +119,11 @@ function createEntity(entityName) {
           console.error(`Error listing ${entityName}:`, error)
           return filterDeletedIds(entityName, getEntityData(entityName))
         }
+        // When Supabase is available, use ONLY Supabase data (no merge).
+        // Merge only happens as a fallback when Supabase is unavailable,
+        // to include records that were created while Supabase was down.
         const items = data || []
-        // Merge with localStorage (to include records saved via fallback)
-        const localItems = getEntityData(entityName)
-        const merged = [...items]
-        for (const localItem of localItems) {
-          if (!merged.find((item) => item.id === localItem.id)) {
-            merged.push(localItem)
-          }
-        }
-        setEntityData(entityName, merged)
-        // Filter out any items that have been soft-deleted
-        return filterDeletedIds(entityName, merged)
+        return filterDeletedIds(entityName, items)
       } catch (supabaseError) {
         console.warn(`Supabase list for ${entityName} failed, using localStorage fallback:`, supabaseError.message)
         return filterDeletedIds(entityName, getEntityData(entityName))
