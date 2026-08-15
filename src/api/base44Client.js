@@ -60,6 +60,29 @@ function setEntityData(entityName, items) {
   setLocalStorageData(all)
 }
 
+// Track IDs that have been deleted (for when Supabase returns stale data)
+function getDeletedIds(entityName) {
+  const key = (entityTableMap[entityName] || entityName.toLowerCase() + 's') + ':deleted'
+  const all = getLocalStorageData()
+  return all[key] || []
+}
+
+function addDeletedId(entityName, id) {
+  const key = (entityTableMap[entityName] || entityName.toLowerCase() + 's') + ':deleted'
+  const all = getLocalStorageData()
+  const deleted = all[key] || []
+  if (!deleted.includes(id)) {
+    deleted.push(id)
+    all[key] = deleted
+    setLocalStorageData(all)
+  }
+}
+
+function filterDeletedIds(entityName, items) {
+  const deletedIds = getDeletedIds(entityName)
+  return items.filter((item) => !deletedIds.includes(item.id))
+}
+
 function generateId() {
   // Generate a UUID v4 compatible string for Supabase UUID columns
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -95,7 +118,7 @@ function createEntity(entityName) {
         const { data, error } = await query
         if (error) {
           console.error(`Error listing ${entityName}:`, error)
-          return getEntityData(entityName)
+          return filterDeletedIds(entityName, getEntityData(entityName))
         }
         const items = data || []
         // Merge with localStorage (to include records saved via fallback)
@@ -107,10 +130,11 @@ function createEntity(entityName) {
           }
         }
         setEntityData(entityName, merged)
-        return merged
+        // Filter out any items that have been soft-deleted
+        return filterDeletedIds(entityName, merged)
       } catch (supabaseError) {
         console.warn(`Supabase list for ${entityName} failed, using localStorage fallback:`, supabaseError.message)
-        return getEntityData(entityName)
+        return filterDeletedIds(entityName, getEntityData(entityName))
       }
     },
 
@@ -136,7 +160,7 @@ function createEntity(entityName) {
         return data
       } catch (supabaseError) {
         console.warn(`Supabase get for ${entityName} (${id}) failed, using localStorage fallback:`, supabaseError.message)
-        const items = getEntityData(entityName)
+        const items = filterDeletedIds(entityName, getEntityData(entityName))
         return items.find((item) => item.id === id) || null
       }
     },
@@ -211,6 +235,10 @@ function createEntity(entityName) {
 
     // delete(id) - mimics base44.entities.Entity.delete(id)
     delete: async (id) => {
+      // Always track deleted ID (handles case where Supabase returns stale data
+      // and list() merges it back in)
+      addDeletedId(entityName, id)
+
       // Always remove from localStorage fallback (handles the case where
       // isSupabaseReady() is true but Supabase is a mock/unreachable, and
       // list() merges localStorage data back in)
@@ -235,8 +263,8 @@ function createEntity(entityName) {
         }
       } catch (supabaseError) {
         // Supabase mock client may not support full chaining (e.g., .delete().eq())
-        // The localStorage deletion above already handled the local copy, so this
-        // error can be safely swallowed.
+        // The localStorage deletion and deleted-ID tracking above already handled
+        // the local copy, so this error can be safely swallowed.
         console.warn(`Supabase delete for ${entityName} (${id}) skipped:`, supabaseError.message)
       }
       return true
@@ -255,12 +283,12 @@ function createEntity(entityName) {
 
         if (error) {
           console.error(`Error counting ${entityName}:`, error)
-          return getEntityData(entityName).length
+          return filterDeletedIds(entityName, getEntityData(entityName)).length
         }
         return count
       } catch (supabaseError) {
         console.warn(`Supabase count for ${entityName} failed, using localStorage fallback:`, supabaseError.message)
-        return getEntityData(entityName).length
+        return filterDeletedIds(entityName, getEntityData(entityName)).length
       }
     },
   }
