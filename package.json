@@ -14,9 +14,11 @@
   },
   "dependencies": {
     "@base44/sdk": "^0.8.41",
+    "@convex-dev/auth": "^0.0.95",
     "@radix-ui/react-slot": "^1.0.2",
     "@radix-ui/react-toast": "^1.1.5",
     "@supabase/supabase-js": "^2.112.2",
+    "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.0",
     "convex": "^1.44.0",

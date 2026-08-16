@@ -1,5 +1,8 @@
 import { createClient } from '@supabase/supabase-js'
 import { ConvexHttpClient } from 'convex/browser'
+import { anyApi } from 'convex/server'
+
+const api = anyApi
 
 // ---------------------------------------------------------------------------
 // Convex — the data layer (properties, agents, inquiries, blog posts, ...)
@@ -64,4 +67,35 @@ if (supabaseUrl && supabaseServiceRoleKey) {
   })
 }
 
-export { convexClient, convexHttpClient, supabase, supabaseAdmin }
+// ---------------------------------------------------------------------------
+// Convex auth client — thin wrapper around convexClient for sign-in/out.
+// ---------------------------------------------------------------------------
+const authClient = {
+  /** Sign in / up → returns { token, role, user } */
+  signIn: async (email, password) => {
+    if (!convexClient) throw new Error('Convex not configured')
+    return await convexClient.mutation(api.auth.signIn, { email, password })
+  },
+  signUp: async (name, email, password, role) => {
+    if (!convexClient) throw new Error('Convex not configured')
+    return await convexClient.mutation(api.auth.signUp, { name, email, password, role })
+  },
+  signOut: async (token) => {
+    if (!convexClient) return true
+    try {
+      return await convexClient.mutation(api.auth.signOut, { token })
+    } catch {
+      return true
+    }
+  },
+  getCurrentUser: async (token) => {
+    if (!convexClient) return null
+    try {
+      return await convexClient.query(api.auth.getCurrentUser, { token })
+    } catch {
+      return null
+    }
+  },
+}
+
+export { convexClient, convexHttpClient, supabase, supabaseAdmin, authClient }

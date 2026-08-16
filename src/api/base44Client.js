@@ -13,6 +13,7 @@ const entityTableMap = {
   BlogPost: 'blog_posts',
   Testimonial: 'testimonials',
   Inquiry: 'inquiries',
+  Booking: 'bookings',
   User: 'users',
 }
 
@@ -25,6 +26,7 @@ const entityConvexModule = {
   Inquiry: 'inquiries',
   BlogPost: 'blogPosts',
   Testimonial: 'testimonials',
+  Booking: 'bookings',
 }
 
 // Convert Base44 sort syntax to a { field, descending } pair
@@ -289,6 +291,7 @@ export const base44 = {
     BlogPost: createEntity('BlogPost'),
     Testimonial: createEntity('Testimonial'),
     Inquiry: createEntity('Inquiry'),
+    Booking: createEntity('Booking'),
     User: createEntity('User'),
   },
 }
