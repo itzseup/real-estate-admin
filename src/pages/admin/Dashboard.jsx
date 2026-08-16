@@ -13,12 +13,12 @@ export default function AdminDashboard() {
   const { user, signOut, isAdmin, createAgentAuth } = useAuth()
   const navigate = useNavigate()
 
-  const demoLoggedIn = !!localStorage.getItem('demo_admin_session')
   const supabaseUser = user
 
-  // Check access: either demo admin or Supabase user with admin email
+  // Access check: requires Convex auth session with admin role
+  // The demo localStorage bypass has been removed for security
   const sessionEmail = supabaseUser?.email
-  const hasAccess = demoLoggedIn || (sessionEmail && ADMIN_EMAILS.includes(sessionEmail)) || isAdmin()
+  const hasAccess = isAdmin() || (sessionEmail && ADMIN_EMAILS.includes(sessionEmail))
 
   const [activeTab, setActiveTab] = useState('leads')
   const [properties, setProperties] = useState([])

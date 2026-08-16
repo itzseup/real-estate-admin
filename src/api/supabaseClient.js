@@ -11,13 +11,30 @@ const api = anyApi
 // (base44Client.js) is a plain promise API called outside React components.
 // The URL is written to .env.local by `npx convex dev`.
 
-const convexUrl = import.meta.env.VITE_CONVEX_URL || ''
+// Hosting dashboards accept a pasted `KEY=value` line as the value, which makes
+// ConvexHttpClient throw at module load and blank the whole app. Strip that and
+// reject anything that isn't an http(s) URL so a bad var degrades to the
+// localStorage fallback instead of taking the bundle down.
+function normalizeConvexUrl(rawValue) {
+  const value = String(rawValue || '')
+    .trim()
+    .replace(/^VITE_CONVEX_URL\s*=\s*/, '')
+    .replace(/^["']|["']$/g, '')
+
+  return /^https?:\/\//.test(value) ? value : ''
+}
+
+const convexUrl = normalizeConvexUrl(import.meta.env.VITE_CONVEX_URL)
 
 let convexClient = null
 if (convexUrl) {
-  convexClient = new ConvexHttpClient(convexUrl)
+  try {
+    convexClient = new ConvexHttpClient(convexUrl)
+  } catch (error) {
+    console.error('Convex client init failed — using localStorage fallback:', error)
+  }
 } else {
-  console.warn('VITE_CONVEX_URL not set — Convex disabled, using localStorage fallback')
+  console.warn('VITE_CONVEX_URL not set or invalid — Convex disabled, using localStorage fallback')
 }
 
 // Alias kept because the migration task refers to this name.
